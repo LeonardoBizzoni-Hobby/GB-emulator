@@ -1,0 +1,126 @@
+* Table of Contents :TOC:
+- [[#gameboys-cpu][GameBoy's CPU]]
+  - [[#registers][Registers]]
+  - [[#register-f---cpu-flags][Register F - CPU flags]]
+
+* GameBoy's CPU
+** Registers
+The CPU is composed of 8 different "registers" and 2 special 16bit registers, the *program counter PC* and the *stack pointer SP*.
+Registers are responsible for holding on to data that the CPU can manipulate.
+Each register can hold 8bits of data.
+
+#+BEGIN_SRC rust :tangle src/cpu/registers.rs
+  use crate::cpu::flags::FlagsRegister;
+  
+  pub struct Registers {
+      a: u8,
+      b: u8,
+      c: u8,
+      d: u8,
+      e: u8,
+      f: FlagsRegister,
+      h: u8,
+      l: u8,
+      pc: u16,
+      sp: u16,
+  }
+#+END_SRC
+
+There are some instructions that allow the game to read and write 16bits of data at the same time by grouping together 2 registers.
+
+The steps to read data from 2 registers at once are:
+- Treat the first register as a 16bit register
+- Shift to the left the bits stored in the first register 8 times so that they occupy the most significant positions
+- Merge with the second register
+
+To instead write data to 2 registers at once:
+- Get the first byte of value to write (& 0xFF00)
+- Shift it to the right so that it occupies the least significant positions
+- Asign it to the first register
+- Get the second byte of value to write (&0xFF)
+- Asign it to the second register
+
+#+BEGIN_SRC rust :tangle src/cpu/registers.rs
+  impl Registers {
+      fn get_af(&self) -> u16 {
+          (self.a as u16) << 8 | u8::from(self.f) as u16
+      }
+      fn get_bc(&self) -> u16 {
+          (self.b as u16) << 8 | (self.c as u16)
+      }
+      fn get_de(&self) -> u16 {
+          (self.d as u16) << 8 | (self.e as u16)
+      }
+      fn get_hl(&self) -> u16 {
+          (self.h as u16) << 8 | (self.l as u16)
+      }
+
+      fn set_af(&mut self, value: u16) {
+          self.a = ((value & 0xFF00) >> 8) as u8;
+          self.f = FlagsRegister::from((value & 0xFF) as u8);
+      }
+      fn set_bc(&mut self, value: u16) {
+          self.b = ((value & 0xFF00) >> 8) as u8;
+          self.c = (value & 0xFF) as u8;
+      }
+      fn set_de(&mut self, value: u16) {
+          self.d = ((value & 0xFF00) >> 8) as u8;
+          self.e = (value & 0xFF) as u8;
+      }
+      fn set_hl(&mut self, value: u16) {
+          self.h = ((value & 0xFF00) >> 8) as u8;
+          self.l = (value & 0xFF) as u8;
+      }
+  }
+#+END_SRC
+
+** Register F - CPU flags
+The *F* register holds the cpu flags.
+The lower 4 bits of this register are always 0s and the CPU automatically writes to the upper 4 bits when something happen.
+
+| bit | Explanation |
+|-----+-------------|
+|   7 | Zero flag   |
+|   6 | Subtraction |
+|   5 | Half Carry  |
+|   4 | Carry flag  |
+| 3-0 | Always 0s   |
+
+#+BEGIN_SRC rust :tangle src/cpu/flags.rs
+  #[derive(Copy, Clone)]
+  pub struct FlagsRegister {
+      zero: bool,
+      subtraction: bool,
+      half_carry: bool,
+      carry: bool,
+  }
+#+END_SRC
+
+To make it easier to read data from this register I implemented the [[https://doc.rust-lang.org/std/convert/trait.From.html][convert trait]] in both directions: flag to u8, u8 to flag.
+
+#+BEGIN_SRC rust :tangle src/cpu/flags.rs
+  impl std::convert::From<FlagsRegister> for u8 {
+      fn from(flag: FlagsRegister) -> u8 {
+          (if flag.zero { 1 } else { 0 }) << 7
+              | (if flag.subtraction { 1 } else { 0 }) << 6
+              | (if flag.half_carry { 1 } else { 0 }) << 5
+              | (if flag.carry { 1 } else { 0 }) << 4
+      }
+  }
+
+  impl std::convert::From<u8> for FlagsRegister {
+      fn from(byte: u8) -> Self {
+          let zero: bool = (byte >> 7) != 0;
+          let subtraction: bool = (byte >> 6) != 0;
+          let half_carry: bool = (byte >> 5) != 0;
+          let carry: bool = (byte >> 4) != 0;
+
+          FlagsRegister {
+              zero,
+              subtraction,
+              half_carry,
+              carry,
+          }
+      }
+  }
+#+END_SRC
