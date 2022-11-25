@@ -9,9 +9,7 @@ The CPU is composed of 8 different "registers" and 2 special 16bit registers, th
 Registers are responsible for holding on to data that the CPU can manipulate.
 Each register can hold 8bits of data.
 
-#+BEGIN_SRC rust :tangle src/cpu/registers.rs
-  use crate::cpu::flags::FlagsRegister;
-  
+#+BEGIN_SRC rust
   pub struct Registers {
       a: u8,
       b: u8,
@@ -40,36 +38,14 @@ To instead write data to 2 registers at once:
 - Get the second byte of value to write (&0xFF)
 - Asign it to the second register
 
-#+BEGIN_SRC rust :tangle src/cpu/registers.rs
+#+BEGIN_SRC rust
   impl Registers {
       fn get_af(&self) -> u16 {
           (self.a as u16) << 8 | u8::from(self.f) as u16
       }
-      fn get_bc(&self) -> u16 {
-          (self.b as u16) << 8 | (self.c as u16)
-      }
-      fn get_de(&self) -> u16 {
-          (self.d as u16) << 8 | (self.e as u16)
-      }
-      fn get_hl(&self) -> u16 {
-          (self.h as u16) << 8 | (self.l as u16)
-      }
-
       fn set_af(&mut self, value: u16) {
           self.a = ((value & 0xFF00) >> 8) as u8;
           self.f = FlagsRegister::from((value & 0xFF) as u8);
-      }
-      fn set_bc(&mut self, value: u16) {
-          self.b = ((value & 0xFF00) >> 8) as u8;
-          self.c = (value & 0xFF) as u8;
-      }
-      fn set_de(&mut self, value: u16) {
-          self.d = ((value & 0xFF00) >> 8) as u8;
-          self.e = (value & 0xFF) as u8;
-      }
-      fn set_hl(&mut self, value: u16) {
-          self.h = ((value & 0xFF00) >> 8) as u8;
-          self.l = (value & 0xFF) as u8;
       }
   }
 #+END_SRC
@@ -86,8 +62,7 @@ The lower 4 bits of this register are always 0s and the CPU automatically writes
 |   4 | Carry flag  |
 | 3-0 | Always 0s   |
 
-#+BEGIN_SRC rust :tangle src/cpu/flags.rs
-  #[derive(Copy, Clone)]
+#+BEGIN_SRC rust
   pub struct FlagsRegister {
       zero: bool,
       subtraction: bool,
@@ -98,7 +73,7 @@ The lower 4 bits of this register are always 0s and the CPU automatically writes
 
 To make it easier to read data from this register I implemented the [[https://doc.rust-lang.org/std/convert/trait.From.html][convert trait]] in both directions: flag to u8, u8 to flag.
 
-#+BEGIN_SRC rust :tangle src/cpu/flags.rs
+#+BEGIN_SRC rust
   impl std::convert::From<FlagsRegister> for u8 {
       fn from(flag: FlagsRegister) -> u8 {
           (if flag.zero { 1 } else { 0 }) << 7

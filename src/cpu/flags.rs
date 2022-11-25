@@ -1,9 +1,9 @@
 #[derive(Copy, Clone)]
 pub struct FlagsRegister {
-    zero: bool,
-    subtraction: bool,
-    half_carry: bool,
-    carry: bool,
+    pub zero: bool,
+    pub subtraction: bool,
+    pub half_carry: bool,
+    pub carry: bool,
 }
 
 impl std::convert::From<FlagsRegister> for u8 {
