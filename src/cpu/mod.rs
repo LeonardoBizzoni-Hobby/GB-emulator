@@ -22,9 +22,14 @@ struct CPU {
 #[allow(dead_code)]
 impl CPU {
     fn step(&mut self) {
-        let instruction_address = self.bus.read_byte(self.pc);
+        let mut instruction_address = self.bus.read_byte(self.pc);
+	let is_prefix = instruction_address == 0xCB;
 
-        self.pc = if let Some(instruction) = Instruction::from_byte(instruction_address) {
+	if is_prefix {
+	    instruction_address = self.bus.read_byte(self.pc+1);
+	}
+
+        self.pc = if let Some(instruction) = Instruction::from_byte(instruction_address, is_prefix) {
             self.execute(instruction)
         } else {
             panic!("Invalid instruction found at: 0x{:x}", instruction_address);
