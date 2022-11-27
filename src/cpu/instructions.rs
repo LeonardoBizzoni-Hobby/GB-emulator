@@ -37,6 +37,8 @@ pub enum Instruction {
 
     JP(JumpCondition),
     JR(JumpCondition),
+
+    LD(LoadType),
 }
 
 pub enum ArithmeticTarget {
@@ -87,6 +89,53 @@ pub enum JumpCondition {
     NotCarry,
     Carry,
     Always,
+}
+
+pub enum LoadType {
+    Byte(LoadByteTarget, LoadByteSrc),
+    Word(LoadWordTarget),
+    AFromIndirect(IndirectSrc),
+    IndirectFromA(IndirectSrc),
+    AFromByteAddress,
+    ByteAddressFromA,
+}
+
+pub enum LoadByteTarget {
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    HLI,
+}
+
+pub enum LoadByteSrc {
+    A,
+    B,
+    C,
+    D,
+    E,
+    H,
+    L,
+    D8,
+    HLI,
+}
+
+pub enum LoadWordTarget {
+    BC,
+    DE,
+    HL,
+}
+
+pub enum IndirectSrc {
+    BC,
+    DE,
+    HLMinus,
+    HLPlus,
+    D8,
+    IOPortC,
 }
 
 impl std::convert::From<BitPosition> for u8 {

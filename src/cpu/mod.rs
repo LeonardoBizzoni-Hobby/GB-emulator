@@ -1,6 +1,6 @@
 use self::{
     instructions::{
-        ArithmeticTarget, BitPosition, GroupedArithmeticTarget, IncDecTarget, Instruction, JumpCondition,
+        ArithmeticTarget, BitPosition, GroupedArithmeticTarget, IncDecTarget, Instruction, JumpCondition, LoadType, LoadByteSrc, LoadByteTarget, LoadWordTarget, IndirectSrc,
     },
     memory::MemoryBus,
     registers::Registers,
@@ -479,6 +479,106 @@ impl CPU {
 	    Instruction::JPI => {
 		self.registers.get_hl()
 	    }
+	    Instruction::LD(load_type) => {
+		match load_type {
+		    LoadType::Byte(target, src) => {
+			let value = match src {
+			    LoadByteSrc::A => self.registers.a,
+			    LoadByteSrc::B => self.registers.b,
+			    LoadByteSrc::C => self.registers.c,
+			    LoadByteSrc::D => self.registers.d,
+			    LoadByteSrc::E => self.registers.e,
+			    LoadByteSrc::H => self.registers.h,
+			    LoadByteSrc::L => self.registers.l,
+			    LoadByteSrc::D8 => self.bus.read_byte(self.pc + 1), // direct 8bit value
+			    LoadByteSrc::HLI => self.bus.read_byte(self.registers.get_hl()),
+			};
+
+			match target {
+			    LoadByteTarget::A => self.registers.a = value,
+			    LoadByteTarget::B => self.registers.b = value,
+			    LoadByteTarget::C => self.registers.c = value,
+			    LoadByteTarget::D => self.registers.d = value,
+			    LoadByteTarget::E => self.registers.e = value,
+			    LoadByteTarget::H => self.registers.h = value,
+			    LoadByteTarget::L => self.registers.l = value,
+			    LoadByteTarget::HLI => self.bus.write_byte(self.registers.get_hl(), value),
+			};
+
+			match src {
+			    LoadByteSrc::D8 => self.pc.wrapping_add(3),
+			    _ => self.pc.wrapping_add(1),
+			}
+		    }
+		    LoadType::Word(target) => {
+			let value = self.next_word();
+			match target {
+			    LoadWordTarget::BC => self.registers.set_bc(value),
+			    LoadWordTarget::DE => self.registers.set_de(value),
+			    LoadWordTarget::HL => self.registers.set_hl(value),
+			}
+
+			self.pc.wrapping_add(3)
+		    }
+		    LoadType::AFromIndirect(target) => {
+			self.registers.a = match target {
+			    IndirectSrc::BC => self.bus.read_byte(self.registers.get_bc()),
+			    IndirectSrc::DE => self.bus.read_byte(self.registers.get_de()),
+			    IndirectSrc::HLMinus => {
+				let hl = self.registers.get_hl();
+				self.registers.set_hl(hl.wrapping_sub(1));
+				self.bus.read_byte(hl)
+			    },
+			    IndirectSrc::HLPlus => {
+				let hl = self.registers.get_hl();
+				self.registers.set_hl(hl.wrapping_add(1));
+				self.bus.read_byte(hl)
+			    },
+			    IndirectSrc::D8 => self.bus.read_byte(self.next_word()),
+			    IndirectSrc::IOPortC => self.bus.read_byte(0xFF00 + self.registers.c as u16),
+			};
+
+			match target {
+			    IndirectSrc::D8 => self.pc.wrapping_add(3),
+			    _ => self.pc.wrapping_add(1),
+			}
+		    }
+		    LoadType::IndirectFromA(src) => {
+			let value = self.registers.a;
+			match src {
+			    IndirectSrc::BC => self.bus.write_byte(self.registers.get_bc(), value),
+			    IndirectSrc::DE => self.bus.write_byte(self.registers.get_de(), value),
+			    IndirectSrc::HLMinus => {
+				let hl = self.registers.get_hl();
+				self.registers.set_hl(hl.wrapping_sub(1));
+				self.bus.write_byte(hl, value)
+			    },
+			    IndirectSrc::HLPlus => {
+				let hl = self.registers.get_hl();
+				self.registers.set_hl(hl.wrapping_add(1));
+				self.bus.write_byte(hl, value)
+			    },
+			    IndirectSrc::D8 => self.bus.write_byte(self.next_word(), value),
+			    IndirectSrc::IOPortC => self.bus.write_byte(0xFF00 + self.registers.c as u16, value),
+			}
+
+			match src {
+			    IndirectSrc::D8 => self.pc.wrapping_add(3),
+			    _ => self.pc.wrapping_add(1),
+			}
+		    }
+		    LoadType::AFromByteAddress => {
+			let offset = self.bus.read_byte(self.pc+1) as u16;
+			self.bus.write_byte(0xFF00+offset, self.registers.a);
+			self.pc.wrapping_add(2)
+		    },
+		    LoadType::ByteAddressFromA => {
+			let offset = self.bus.read_byte(self.pc+1) as u16;
+			self.registers.a = self.bus.read_byte(0xFF00+offset);
+			self.pc.wrapping_add(2)
+		    },
+		}
+	    }
         }
     }
 }
@@ -787,12 +887,16 @@ impl CPU {
         res
     }
 
+    fn next_word(&self) -> u16 {
+	let lower_nibble = self.bus.read_byte(self.pc+1) as u16;
+	let higher_nibble = self.bus.read_byte(self.pc+2) as u16;
+	
+	(higher_nibble << 8) | lower_nibble
+    }
+
     fn jump(&self, condition: bool) -> u16 {
 	if condition {
-	    let lower_nibble = self.bus.read_byte(self.pc+1) as u16;
-	    let higher_nibble = self.bus.read_byte(self.pc+2) as u16;
-
-	    (higher_nibble << 8) | lower_nibble
+	    self.next_word()
 	} else {
 	    self.pc.wrapping_add(3)
 	}
