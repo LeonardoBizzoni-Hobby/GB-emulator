@@ -29,10 +29,14 @@ pub enum Instruction {
     RRCA,
     RLCA,
     CPL,
+    JPI,
 
     BIT(ArithmeticTarget, BitPosition),
     RESET(ArithmeticTarget, BitPosition),
     SET(ArithmeticTarget, BitPosition),
+
+    JP(JumpCondition),
+    JR(JumpCondition),
 }
 
 pub enum ArithmeticTarget {
@@ -75,6 +79,14 @@ pub enum BitPosition {
     B5,
     B6,
     B7,
+}
+
+pub enum JumpCondition {
+    NotZero,
+    Zero,
+    NotCarry,
+    Carry,
+    Always,
 }
 
 impl std::convert::From<BitPosition> for u8 {

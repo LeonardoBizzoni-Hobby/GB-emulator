@@ -1,6 +1,6 @@
 use self::{
     instructions::{
-        ArithmeticTarget, BitPosition, GroupedArithmeticTarget, IncDecTarget, Instruction,
+        ArithmeticTarget, BitPosition, GroupedArithmeticTarget, IncDecTarget, Instruction, JumpCondition,
     },
     memory::MemoryBus,
     registers::Registers,
@@ -50,6 +50,7 @@ impl CPU {
                 };
 
                 self.registers.a = self.add(value);
+		self.pc.wrapping_add(1)
             }
             Instruction::ADDHL(grouped_register) => {
                 let value = match grouped_register {
@@ -60,6 +61,7 @@ impl CPU {
 
                 let res = self.addhl(value);
                 self.registers.set_hl(res);
+		self.pc.wrapping_add(1)
             }
             Instruction::ADC(register) => {
                 let value = match register {
@@ -73,6 +75,7 @@ impl CPU {
                 };
 
                 self.registers.a = self.add_with_carry(value);
+		self.pc.wrapping_add(1)
             }
             Instruction::SUB(register) => {
                 let value = match register {
@@ -86,6 +89,7 @@ impl CPU {
                 };
 
                 self.registers.a = self.sub(value);
+		self.pc.wrapping_add(1)
             }
             Instruction::SBC(register) => {
                 let value = match register {
@@ -99,6 +103,7 @@ impl CPU {
                 };
 
                 self.registers.a = self.sub_with_carry(value);
+		self.pc.wrapping_add(1)
             }
             Instruction::AND(register) => {
                 let value = match register {
@@ -112,6 +117,7 @@ impl CPU {
                 };
 
                 self.registers.a = self.and(value);
+		self.pc.wrapping_add(1)
             }
             Instruction::OR(register) => {
                 let value = match register {
@@ -125,6 +131,7 @@ impl CPU {
                 };
 
                 self.registers.a = self.or(value);
+		self.pc.wrapping_add(1)
             }
             Instruction::XOR(register) => {
                 let value = match register {
@@ -138,6 +145,7 @@ impl CPU {
                 };
 
                 self.registers.a = self.xor(value);
+		self.pc.wrapping_add(1)
             }
             Instruction::CP(register) => {
                 let value = match register {
@@ -151,6 +159,7 @@ impl CPU {
                 };
 
                 self.compare(value);
+		self.pc.wrapping_add(1)
             }
 
             Instruction::INC(register) => {
@@ -175,6 +184,8 @@ impl CPU {
                         self.registers.set_hl(res);
                     }
                 };
+
+		self.pc.wrapping_add(1)
             }
             Instruction::DEC(register) => {
                 match register {
@@ -198,27 +209,36 @@ impl CPU {
                         self.registers.set_hl(res);
                     }
                 };
+
+		self.pc.wrapping_add(1)
             }
             Instruction::CCF => {
                 self.complement_carry();
+		self.pc.wrapping_add(1)
             }
             Instruction::SCF => {
                 self.set_carry();
+		self.pc.wrapping_add(1)
             }
             Instruction::RRA => {
                 self.rotate_right_a_with_carry();
+		self.pc.wrapping_add(1)
             }
             Instruction::RLA => {
                 self.rotate_left_a_with_carry();
+		self.pc.wrapping_add(1)
             }
             Instruction::RRCA => {
                 self.rotate_right_a();
+		self.pc.wrapping_add(1)
             }
             Instruction::RLCA => {
                 self.rotate_left_a();
+		self.pc.wrapping_add(1)
             }
             Instruction::CPL => {
                 self.complement();
+		self.pc.wrapping_add(1)
             }
             Instruction::BIT(register, bit) => {
                 let value = match register {
@@ -232,6 +252,7 @@ impl CPU {
                 };
 
                 self.test_bit(value, bit);
+		self.pc.wrapping_add(1)
             }
             Instruction::RESET(register, bit) => {
                 match register {
@@ -243,6 +264,8 @@ impl CPU {
                     ArithmeticTarget::H => self.registers.h = self.reset_bit(self.registers.h, bit),
                     ArithmeticTarget::L => self.registers.l = self.reset_bit(self.registers.l, bit),
                 };
+
+		self.pc.wrapping_add(1)
             }
             Instruction::SET(register, bit) => {
                 match register {
@@ -254,6 +277,8 @@ impl CPU {
                     ArithmeticTarget::H => self.registers.h = self.set_bit(self.registers.h, bit),
                     ArithmeticTarget::L => self.registers.l = self.set_bit(self.registers.l, bit),
                 };
+
+		self.pc.wrapping_add(1)
             }
             Instruction::SRL(register) => {
                 match register {
@@ -279,6 +304,8 @@ impl CPU {
                         self.registers.l = self.shift_right_logical(self.registers.l)
                     }
                 };
+
+		self.pc.wrapping_add(1)
             }
             Instruction::RR(register) => {
                 match register {
@@ -304,6 +331,8 @@ impl CPU {
                         self.registers.l = self.rotate_right_with_carry(self.registers.l)
                     }
                 };
+
+		self.pc.wrapping_add(1)
             }
             Instruction::RL(register) => {
                 match register {
@@ -329,6 +358,8 @@ impl CPU {
                         self.registers.l = self.rotate_left_with_carry(self.registers.l)
                     }
                 };
+
+		self.pc.wrapping_add(1)
             }
             Instruction::RRC(register) => {
                 match register {
@@ -340,6 +371,8 @@ impl CPU {
                     ArithmeticTarget::H => self.registers.h = self.rotate_right(self.registers.h),
                     ArithmeticTarget::L => self.registers.l = self.rotate_right(self.registers.l),
                 };
+
+		self.pc.wrapping_add(1)
             }
             Instruction::RLC(register) => {
                 match register {
@@ -351,6 +384,8 @@ impl CPU {
                     ArithmeticTarget::H => self.registers.h = self.rotate_left(self.registers.h),
                     ArithmeticTarget::L => self.registers.l = self.rotate_left(self.registers.l),
                 };
+
+		self.pc.wrapping_add(1)
             }
             Instruction::SRA(register) => {
                 match register {
@@ -376,6 +411,8 @@ impl CPU {
                         self.registers.l = self.rotate_right_arithmetic(self.registers.l)
                     }
                 };
+
+		self.pc.wrapping_add(1)
             }
             Instruction::SLA(register) => {
                 match register {
@@ -401,6 +438,8 @@ impl CPU {
                         self.registers.l = self.rotate_left_arithmetic(self.registers.l)
                     }
                 };
+
+		self.pc.wrapping_add(1)
             }
             Instruction::SWAP(register) => {
                 match register {
@@ -412,10 +451,35 @@ impl CPU {
                     ArithmeticTarget::H => self.registers.h = self.swap(self.registers.h),
                     ArithmeticTarget::L => self.registers.l = self.swap(self.registers.l),
                 };
-            }
-        }
 
-        self.pc.wrapping_add(1)
+		self.pc.wrapping_add(1)
+            }
+	    Instruction::JP(condition) => {
+		let condition = match condition {
+		    JumpCondition::NotZero => !self.registers.f.zero,
+		    JumpCondition::Zero => self.registers.f.zero,
+		    JumpCondition::NotCarry => !self.registers.f.carry,
+		    JumpCondition::Carry => self.registers.f.carry,
+		    JumpCondition::Always => true,
+		};
+
+		self.jump(condition)
+	    }
+	    Instruction::JR(condition) => {
+		let condition = match condition {
+		    JumpCondition::NotZero => !self.registers.f.zero,
+		    JumpCondition::Zero => self.registers.f.zero,
+		    JumpCondition::NotCarry => !self.registers.f.carry,
+		    JumpCondition::Carry => self.registers.f.carry,
+		    JumpCondition::Always => true,
+		};
+
+		self.jump_relative(condition)
+	    }
+	    Instruction::JPI => {
+		self.registers.get_hl()
+	    }
+        }
     }
 }
 
@@ -721,5 +785,34 @@ impl CPU {
         self.registers.f.carry = false;
 
         res
+    }
+
+    fn jump(&self, condition: bool) -> u16 {
+	if condition {
+	    let lower_nibble = self.bus.read_byte(self.pc+1) as u16;
+	    let higher_nibble = self.bus.read_byte(self.pc+2) as u16;
+
+	    (higher_nibble << 8) | lower_nibble
+	} else {
+	    self.pc.wrapping_add(3)
+	}
+    }
+
+    fn jump_relative(&self, condition: bool) -> u16 {
+	let next = self.pc.wrapping_add(2);
+
+	if condition {
+	    let offset = self.bus.read_byte(self.pc+1) as i8;
+
+	    let pc = if offset >= 0 {
+		next.wrapping_add(offset as u16)
+	    } else {
+		next.wrapping_sub(offset.abs() as u16)
+	    };
+
+	    pc
+	} else {
+	    next
+	}
     }
 }
